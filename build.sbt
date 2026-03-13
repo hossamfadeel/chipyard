@@ -165,6 +165,13 @@ lazy val testchipip = withInitCheck(freshProject("testchipip", file("generators/
   .settings(libraryDependencies ++= rocketLibDeps.value)
   .settings(commonSettings)
 
+lazy val llmaccel = (project in file("generators/llm-accel"))
+  .dependsOn(rocketchip, testchipip, rocketchip_blocks, rocketchip_inclusive_cache)
+  .settings(libraryDependencies ++= rocketLibDeps.value)
+  .settings(commonSettings)
+  .settings(chiselSettings)
+  .settings(scalaTestSettings)
+
 lazy val chipyard = {
   val useChisel7 = sys.env.contains("USE_CHISEL7")
   // Base chipyard project with always-on dependencies
@@ -173,7 +180,7 @@ lazy val chipyard = {
     Seq(
       testchipip, rocketchip, boom, rocketchip_blocks, rocketchip_inclusive_cache,
       icenet, tracegen,
-      constellation, barf, shuttle, rerocc,
+      constellation, barf, shuttle, rerocc, llmaccel,
     ).map(sbt.Project.projectToRef) ++
     (if (useChisel7) Seq() else Seq(sbt.Project.projectToRef(firrtl2_bridge))) ++
     (if (useChisel7) Seq() else Seq(sbt.Project.projectToRef(dsptools), sbt.Project.projectToRef(rocket_dsp_utils)))
@@ -232,7 +239,8 @@ lazy val chipyard = {
     "caliptra-aes-acc" -> caliptra_aes,
     "compress-acc" -> compressacc,
     "mempress" -> mempress,
-    "fft-generator" -> fft_generator
+    "fft-generator" -> fft_generator,
+    "llm-accel" -> llmaccel
   )
 
   // Discover optional modules if their submodule is initialized
@@ -253,6 +261,11 @@ lazy val chipyard = {
         // Resolve from repo root so paths are correct regardless of project base
         (ThisBuild / baseDirectory).value / s"generators/$dir/chipyard"
       }.filter(_.exists)
+  )
+
+  cy = cy.settings(
+    Compile / unmanagedSourceDirectories +=
+      ((ThisBuild / baseDirectory).value / "generators/llm-accel/src/main/scala")
   )
 
   cy
